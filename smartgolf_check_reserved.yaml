@@ -17,6 +17,27 @@ wantType:
     value: "pending"
 
   state:
+    - name: skill_timeout_seconds
+      description: Max seconds to wait for the skill script to complete (default 120)
+      type: int
+      label: goal
+      persistent: false
+      initialValue: 120
+
+    - name: skill_path
+      description: Path to the MRS skill script (set by onInitialize)
+      type: string
+      label: current
+      persistent: false
+      initialValue: ""
+
+    - name: mrs_raw_output
+      description: Raw JSON output from the MRS skill (source for fetchFrom fields)
+      type: object
+      label: current
+      persistent: false
+      initialValue: null
+
     - name: status
       description: Execution status (pending, done, failed)
       type: string
@@ -37,6 +58,7 @@ wantType:
       label: current
       persistent: true
       initialValue: false
+      fetchFrom: mrs_raw_output
       onFetchData: "is_reserved"
 
     - name: reservations
@@ -45,7 +67,8 @@ wantType:
       label: current
       persistent: true
       initialValue: {}
-      onFetchData: ""
+      fetchFrom: mrs_raw_output
+      onFetchData: "reservations"
 
     - name: next_datetime
       description: Datetime of the first reservation
@@ -53,6 +76,7 @@ wantType:
       label: current
       persistent: true
       initialValue: ""
+      fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].datetime"
 
     - name: next_store
@@ -61,6 +85,7 @@ wantType:
       label: current
       persistent: true
       initialValue: ""
+      fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].store"
 
     - name: next_room
@@ -69,6 +94,7 @@ wantType:
       label: current
       persistent: true
       initialValue: ""
+      fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].room"
 
     - name: checked_at
@@ -77,43 +103,16 @@ wantType:
       label: current
       persistent: true
       initialValue: ""
+      fetchFrom: mrs_raw_output
       onFetchData: "checked_at"
 
   onInitialize:
     current:
       status: "pending"
+      skill_path: "~/.mywant/custom-types/mywant-smartgolf-check-reserved-plugin/main.py"
 
-  inlineAgents:
-    - name: run_check_reserved
-      type: do
-      runtime: shell
-      script: |
-        #!/bin/sh
-        PLUGIN_DIR="$HOME/.mywant/custom-types/mywant-smartgolf-check-reserved-plugin"
-
-        if [ ! -f "$PLUGIN_DIR/main.py" ]; then
-          printf '{"current_updates": {"error": "smartgolf check-reserved script not found at %s", "status": "failed"}}' "$PLUGIN_DIR/main.py"
-          exit 1
-        fi
-
-        ERR_FILE=$(mktemp)
-        OUTPUT=$(python3 "$PLUGIN_DIR/main.py" 2>"$ERR_FILE")
-        EXIT_CODE=$?
-
-        if [ $EXIT_CODE -eq 0 ]; then
-          rm -f "$ERR_FILE"
-          IS_RESERVED=$(printf '%s' "$OUTPUT" | jq -r '.is_reserved')
-          CHECKED_AT=$(printf '%s' "$OUTPUT" | jq -r '.checked_at')
-          ESCAPED_CHECKED_AT=$(printf '%s' "$CHECKED_AT" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
-
-          printf '{"json_data": %s, "current_updates": {"status": "done", "is_reserved": %s, "checked_at": %s, "error": ""}}' \
-            "$OUTPUT" "$IS_RESERVED" "$ESCAPED_CHECKED_AT"
-        else
-          ERR_MSG=$(cat "$ERR_FILE")
-          rm -f "$ERR_FILE"
-          ESCAPED_ERR=$(printf 'smartgolf check-reserved script failed: %s' "$ERR_MSG" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
-          printf '{"current_updates": {"error": %s, "status": "failed"}}' "$ESCAPED_ERR"
-        fi
+  requires:
+    - monitor_mrs_agent
 
   examples:
     - name: Check SmartGolf Reservation
