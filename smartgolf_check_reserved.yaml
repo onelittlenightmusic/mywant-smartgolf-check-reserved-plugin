@@ -1,0 +1,132 @@
+wantType:
+  metadata:
+    name: smartgolf_check_reserved
+    title: SmartGolf Check Reserved
+    description: |
+      Checks whether there is an upcoming (future) SmartGolf reservation by scraping
+      the reservations page via Playwright. Completes after a single execution.
+    version: '1.0'
+    category: smartgolf
+    pattern: independent
+
+  finalResultField: is_reserved
+
+  achievedWhen:
+    field: status
+    operator: "!="
+    value: "pending"
+
+  state:
+    - name: status
+      description: Execution status (pending, done, failed)
+      type: string
+      label: current
+      persistent: true
+      initialValue: "pending"
+
+    - name: error
+      description: Error message if execution failed
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+
+    - name: is_reserved
+      description: True if a future reservation exists
+      type: boolean
+      label: current
+      persistent: true
+      initialValue: false
+      onFetchData: "is_reserved"
+
+    - name: reservations
+      description: Full reservation list from the skill output
+      type: object
+      label: current
+      persistent: true
+      initialValue: {}
+      onFetchData: ""
+
+    - name: next_datetime
+      description: Datetime of the first reservation
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+      onFetchData: "reservations[0].datetime"
+
+    - name: next_store
+      description: Store name of the first reservation
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+      onFetchData: "reservations[0].store"
+
+    - name: next_room
+      description: Room name of the first reservation
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+      onFetchData: "reservations[0].room"
+
+    - name: checked_at
+      description: JST timestamp when the check was performed (YYYY-MM-DD HH:MM)
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+      onFetchData: "checked_at"
+
+  onInitialize:
+    current:
+      status: "pending"
+
+  inlineAgents:
+    - name: run_check_reserved
+      type: do
+      runtime: shell
+      script: |
+        #!/bin/sh
+        PLUGIN_DIR="$HOME/.mywant/custom-types/mywant-smartgolf-check-reserved-plugin"
+
+        if [ ! -f "$PLUGIN_DIR/main.py" ]; then
+          printf '{"current_updates": {"error": "smartgolf check-reserved script not found at %s", "status": "failed"}}' "$PLUGIN_DIR/main.py"
+          exit 1
+        fi
+
+        ERR_FILE=$(mktemp)
+        OUTPUT=$(python3 "$PLUGIN_DIR/main.py" 2>"$ERR_FILE")
+        EXIT_CODE=$?
+
+        if [ $EXIT_CODE -eq 0 ]; then
+          rm -f "$ERR_FILE"
+          IS_RESERVED=$(printf '%s' "$OUTPUT" | jq -r '.is_reserved')
+          CHECKED_AT=$(printf '%s' "$OUTPUT" | jq -r '.checked_at')
+          ESCAPED_CHECKED_AT=$(printf '%s' "$CHECKED_AT" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
+
+          printf '{"json_data": %s, "current_updates": {"status": "done", "is_reserved": %s, "checked_at": %s, "error": ""}}' \
+            "$OUTPUT" "$IS_RESERVED" "$ESCAPED_CHECKED_AT"
+        else
+          ERR_MSG=$(cat "$ERR_FILE")
+          rm -f "$ERR_FILE"
+          ESCAPED_ERR=$(printf 'smartgolf check-reserved script failed: %s' "$ERR_MSG" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
+          printf '{"current_updates": {"error": %s, "status": "failed"}}' "$ESCAPED_ERR"
+        fi
+
+  examples:
+    - name: Check SmartGolf Reservation
+      description: Check whether there is an upcoming SmartGolf reservation
+      want:
+        metadata:
+          name: check_smartgolf_reserved
+          type: smartgolf_check_reserved
+        spec:
+          exposes:
+            - currentState: is_reserved
+              as: is_reserved
+            - currentState: next_datetime
+              as: next_datetime
+            - currentState: next_store
+              as: next_store
