@@ -1,0 +1,39 @@
+agent:
+  metadata:
+    name: smartgolf_check_reserved_agent
+    capability: smartgolf_check_reserved
+    type: monitor
+  script:
+    path: ./main.py
+    timeout_seconds: 120
+  state_updates:
+    - name: is_reserved
+      type: boolean
+      label: current
+      persistent: true
+      onFetchData: "is_reserved"
+    - name: reservations
+      type: object
+      label: current
+      persistent: true
+      onFetchData: "reservations"
+    - name: next_datetime
+      type: string
+      label: current
+      persistent: true
+      onFetchData: "reservations[0].datetime"
+    - name: next_store
+      type: string
+      label: current
+      persistent: true
+      onFetchData: "reservations[0].store"
+    - name: next_room
+      type: string
+      label: current
+      persistent: true
+      onFetchData: "reservations[0].room"
+    - name: checked_at
+      type: string
+      label: current
+      persistent: true
+      onFetchData: "checked_at"
