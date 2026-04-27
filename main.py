@@ -42,16 +42,23 @@ def parse_datetime_line(line):
         return None
 
 
+def report_progress(percentage, message=""):
+    print(json.dumps({"_progress": percentage, "_message": message}, ensure_ascii=False), flush=True)
+
+
 def main():
     try:
         with sync_playwright() as p:
+            report_progress(5, "Connecting to browser")
             browser = p.chromium.connect_over_cdp("http://localhost:9222")
             context = browser.contexts[0]
             page = context.new_page()
 
+            report_progress(20, "Navigating to reservations page")
             page.goto(RESERVATIONS_URL, wait_until="domcontentloaded")
             time.sleep(3)
 
+            report_progress(50, "Parsing reservation data")
             now_jst = datetime.now(JST)
 
             body_text = page.inner_text("body")
@@ -98,12 +105,13 @@ def main():
                 "reservations": reservations,
                 "checked_at": now_jst.strftime("%Y-%m-%d %H:%M"),
             }
-            print(json.dumps(output, ensure_ascii=False))
+            report_progress(100, "Done")
+            print(json.dumps(output, ensure_ascii=False), flush=True)
 
     except SystemExit:
         raise
     except Exception as e:
-        print(json.dumps({"error": str(e), "is_reserved": False, "reservations": []}, ensure_ascii=False))
+        print(json.dumps({"error": str(e), "is_reserved": False, "reservations": []}, ensure_ascii=False), flush=True)
         sys.exit(1)
 
 
