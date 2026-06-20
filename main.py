@@ -53,46 +53,46 @@ def main():
             browser = p.chromium.connect_over_cdp("http://localhost:9222")
             context = browser.contexts[0]
             page = context.new_page()
+            try:
+                report_progress(20, "Navigating to reservations page")
+                page.goto(RESERVATIONS_URL, wait_until="domcontentloaded")
+                time.sleep(3)
 
-            report_progress(20, "Navigating to reservations page")
-            page.goto(RESERVATIONS_URL, wait_until="domcontentloaded")
-            time.sleep(3)
+                report_progress(50, "Parsing reservation data")
+                now_jst = datetime.now(JST)
 
-            report_progress(50, "Parsing reservation data")
-            now_jst = datetime.now(JST)
+                body_text = page.inner_text("body")
+                lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # ページ構造:
-            #   Approved
-            #   <店名> 打席予約ページ
-            #   <店名>/<部屋名>
-            #   <曜日>, <月> <日>, <年> <HH:MM>（60 minutes）
-            #   No Preference
-            #   SMART GOLF <店名>
-            reservations = []
-            i = 0
-            while i < len(lines):
-                if lines[i] in ("Approved", "Cancelled", "Pending"):
-                    status = lines[i]
-                    room = lines[i + 2] if i + 2 < len(lines) else ""
-                    dt_line = lines[i + 3] if i + 3 < len(lines) else ""
-                    dt_obj = parse_datetime_line(dt_line)
-                    if dt_obj:
-                        store = room.split("/")[0] if "/" in room else ""
-                        reservations.append({
-                            "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
-                            "store": store,
-                            "room": room,
-                            "status": status,
-                            "is_future": dt_obj > now_jst,
-                        })
-                    i += 1
-                else:
-                    i += 1
-
-            page.close()
+                # ページ構造:
+                #   Approved
+                #   <店名> 打席予約ページ
+                #   <店名>/<部屋名>
+                #   <曜日>, <月> <日>, <年> <HH:MM>（60 minutes）
+                #   No Preference
+                #   SMART GOLF <店名>
+                reservations = []
+                i = 0
+                while i < len(lines):
+                    if lines[i] in ("Approved", "Cancelled", "Pending"):
+                        status = lines[i]
+                        room = lines[i + 2] if i + 2 < len(lines) else ""
+                        dt_line = lines[i + 3] if i + 3 < len(lines) else ""
+                        dt_obj = parse_datetime_line(dt_line)
+                        if dt_obj:
+                            store = room.split("/")[0] if "/" in room else ""
+                            reservations.append({
+                                "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
+                                "store": store,
+                                "room": room,
+                                "status": status,
+                                "is_future": dt_obj > now_jst,
+                            })
+                        i += 1
+                    else:
+                        i += 1
+            finally:
+                page.close()
 
             future_reservations = [r for r in reservations if r.get("is_future")]
             is_reserved = len(future_reservations) > 0
@@ -102,7 +102,7 @@ def main():
 
             output = {
                 "is_reserved": is_reserved,
-                "reservations": reservations,
+                "reservations": future_reservations,  # 過去の予約は除外
                 "checked_at": now_jst.strftime("%Y-%m-%d %H:%M"),
             }
             report_progress(100, "Done")

@@ -8,8 +8,12 @@ wantType:
     version: '1.0'
     category: smartgolf
     pattern: independent
+    labels:
+      category-icon: Flag
+      category-bg-light: "linear-gradient(160deg, #bbf7d0 0%, #dcfce7 100%)"
+      category-bg-dark: "linear-gradient(160deg, #166534 0%, #052e16 100%)"
 
-  finalResultField: is_reserved
+  finalResultField: current_reservation
 
   state:
     - name: skill_timeout_seconds
@@ -40,53 +44,77 @@ wantType:
       persistent: true
       initialValue: ""
 
+    - name: summary
+      description: Human-readable progress summary updated by monitor_mrs_agent
+      type: string
+      label: current
+      persistent: false
+      initialValue: ""
+
     - name: is_reserved
-      description: True if a future reservation exists
+      description: >
+        Whether a future SmartGolf reservation already exists.
+        True means the user already has an upcoming booking and may not need to book again.
       type: boolean
       label: current
       persistent: true
-      initialValue: false
+      initialValue: null
+      exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "is_reserved"
 
     - name: reservations
-      description: Full reservation list from the skill output
+      description: Full list of upcoming SmartGolf reservations with store/room/datetime details
       type: object
       label: current
       persistent: true
       initialValue: {}
+      exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations"
 
     - name: next_datetime
-      description: Datetime of the first reservation
+      description: Date and time of the user's next upcoming SmartGolf reservation (YYYY-MM-DD HH:MM)
       type: string
       label: current
       persistent: true
       initialValue: ""
+      exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].datetime"
 
     - name: next_store
-      description: Store name of the first reservation
+      description: Store name of the user's next upcoming SmartGolf reservation (e.g. 北新宿店)
       type: string
       label: current
       persistent: true
       initialValue: ""
+      exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].store"
 
     - name: next_room
-      description: Room name of the first reservation
+      description: Room name of the user's next upcoming SmartGolf reservation (e.g. 右打席予約(Room01))
       type: string
       label: current
       persistent: true
       initialValue: ""
+      exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].room"
 
+    - name: current_reservation
+      description: Next upcoming SmartGolf reservation as a JSON object {room, datetime, store, status}
+      type: object
+      label: current
+      persistent: true
+      initialValue: null
+      exposable: true
+      fetchFrom: mrs_raw_output
+      onFetchData: "reservations[0]"
+
     - name: checked_at
-      description: JST timestamp when the check was performed (YYYY-MM-DD HH:MM)
+      description: JST timestamp when the reservation check was last performed (YYYY-MM-DD HH:MM)
       type: string
       label: current
       persistent: true
