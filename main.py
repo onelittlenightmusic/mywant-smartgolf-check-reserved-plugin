@@ -4,8 +4,8 @@ import re
 import sys
 from datetime import datetime, timezone, timedelta
 
-sys.path.insert(0, os.path.expanduser("~/.mywant/custom-types/shared"))
-from mywant_browser_run import browser_run  # noqa: E402
+sys.path.insert(0, os.path.expanduser("~/work/machine-readable-skills-browser"))
+from mrs_browser import browser_run  # noqa: E402
 
 JST = timezone(timedelta(hours=9))
 RESERVATIONS_URL = "https://smartgolf.stores.jp/reserve/u"
