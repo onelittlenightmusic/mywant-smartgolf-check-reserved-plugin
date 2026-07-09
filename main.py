@@ -2,37 +2,13 @@ import json
 import os
 import re
 import sys
-import urllib.request
 from datetime import datetime, timezone, timedelta
+
+sys.path.insert(0, os.path.expanduser("~/.mywant/custom-types/shared"))
+from mywant_browser_run import browser_run  # noqa: E402
 
 JST = timezone(timedelta(hours=9))
 RESERVATIONS_URL = "https://smartgolf.stores.jp/reserve/u"
-
-MYWANT_API = os.environ.get("MYWANT_URL", "http://localhost:8080")
-
-
-def browser_run(url, steps, keep_open=False, background=True, timeout_ms=90000):
-    """Runs steps (a @puppeteer/replay UserFlow's Step[] JSON, plus our
-    read/readAll/loop/etc. customStep extensions) against url via the mywant
-    browser extension — the CDP-free replacement for
-    playwright.chromium.connect_over_cdp. See engine/server/handlers_web_wants.go's
-    browserRun and mcp/playwright-app/webext-src/browser-run-interpreter.ts.
-    background=True (default) opens the tab without stealing focus."""
-    payload = json.dumps({
-        "url": url, "steps": steps, "keep_open": keep_open,
-        "background": background, "timeout_ms": timeout_ms,
-    }).encode()
-    req = urllib.request.Request(
-        f"{MYWANT_API}/api/v1/web-wants/browser-run",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=(timeout_ms / 1000) + 10) as r:
-        data = json.loads(r.read())
-    if data.get("error"):
-        raise RuntimeError(data["error"])
-    return data.get("result", {})
 
 # "Sun, April 12, 2026 19:00（60 minutes）" → parse up to "19:00"
 _DT_PATTERN = re.compile(
