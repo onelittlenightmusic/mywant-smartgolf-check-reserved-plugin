@@ -1,18 +1,38 @@
 import json
+import os
 import re
 import sys
-import time
+import urllib.request
 from datetime import datetime, timezone, timedelta
-try:
-    from playwright.sync_api import sync_playwright
-except ImportError:
-    print(json.dumps({
-        "error": "playwright module not found. Install with: pip3 install playwright && playwright install chromium"
-    }, ensure_ascii=False))
-    sys.exit(1)
 
 JST = timezone(timedelta(hours=9))
 RESERVATIONS_URL = "https://smartgolf.stores.jp/reserve/u"
+
+MYWANT_API = os.environ.get("MYWANT_URL", "http://localhost:8080")
+
+
+def browser_run(url, steps, keep_open=False, background=True, timeout_ms=90000):
+    """Runs steps (a @puppeteer/replay UserFlow's Step[] JSON, plus our
+    read/readAll/loop/etc. customStep extensions) against url via the mywant
+    browser extension — the CDP-free replacement for
+    playwright.chromium.connect_over_cdp. See engine/server/handlers_web_wants.go's
+    browserRun and mcp/playwright-app/webext-src/browser-run-interpreter.ts.
+    background=True (default) opens the tab without stealing focus."""
+    payload = json.dumps({
+        "url": url, "steps": steps, "keep_open": keep_open,
+        "background": background, "timeout_ms": timeout_ms,
+    }).encode()
+    req = urllib.request.Request(
+        f"{MYWANT_API}/api/v1/web-wants/browser-run",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=(timeout_ms / 1000) + 10) as r:
+        data = json.loads(r.read())
+    if data.get("error"):
+        raise RuntimeError(data["error"])
+    return data.get("result", {})
 
 # "Sun, April 12, 2026 19:00（60 minutes）" → parse up to "19:00"
 _DT_PATTERN = re.compile(
@@ -48,65 +68,59 @@ def report_progress(percentage, message=""):
 
 def main():
     try:
-        with sync_playwright() as p:
-            report_progress(5, "Connecting to browser")
-            browser = p.chromium.connect_over_cdp("http://localhost:9222")
-            context = browser.contexts[0]
-            page = context.new_page()
-            try:
-                report_progress(20, "Navigating to reservations page")
-                page.goto(RESERVATIONS_URL, wait_until="domcontentloaded")
-                time.sleep(3)
+        report_progress(5, "Opening reservations page")
+        result = browser_run(RESERVATIONS_URL, [
+            {"type": "customStep", "name": "read",
+             "parameters": {"selector": "body", "extract": "text", "as": "body_text", "timeout_ms": 8000}},
+        ])
 
-                report_progress(50, "Parsing reservation data")
-                now_jst = datetime.now(JST)
+        report_progress(50, "Parsing reservation data")
+        now_jst = datetime.now(JST)
 
-                body_text = page.inner_text("body")
-                lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+        body_text = result.get("body_text") or ""
+        lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-                # ページ構造:
-                #   Approved
-                #   <店名> 打席予約ページ
-                #   <店名>/<部屋名>
-                #   <曜日>, <月> <日>, <年> <HH:MM>（60 minutes）
-                #   No Preference
-                #   SMART GOLF <店名>
-                reservations = []
-                i = 0
-                while i < len(lines):
-                    if lines[i] in ("Approved", "Cancelled", "Pending"):
-                        status = lines[i]
-                        room = lines[i + 2] if i + 2 < len(lines) else ""
-                        dt_line = lines[i + 3] if i + 3 < len(lines) else ""
-                        dt_obj = parse_datetime_line(dt_line)
-                        if dt_obj:
-                            store = room.split("/")[0] if "/" in room else ""
-                            reservations.append({
-                                "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
-                                "store": store,
-                                "room": room,
-                                "status": status,
-                                "is_future": dt_obj > now_jst,
-                            })
-                        i += 1
-                    else:
-                        i += 1
-            finally:
-                page.close()
+        # ページ構造:
+        #   Approved
+        #   <店名> 打席予約ページ
+        #   <店名>/<部屋名>
+        #   <曜日>, <月> <日>, <年> <HH:MM>（60 minutes）
+        #   No Preference
+        #   SMART GOLF <店名>
+        reservations = []
+        i = 0
+        while i < len(lines):
+            if lines[i] in ("Approved", "Cancelled", "Pending"):
+                status = lines[i]
+                room = lines[i + 2] if i + 2 < len(lines) else ""
+                dt_line = lines[i + 3] if i + 3 < len(lines) else ""
+                dt_obj = parse_datetime_line(dt_line)
+                if dt_obj:
+                    store = room.split("/")[0] if "/" in room else ""
+                    reservations.append({
+                        "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
+                        "store": store,
+                        "room": room,
+                        "status": status,
+                        "is_future": dt_obj > now_jst,
+                    })
+                i += 1
+            else:
+                i += 1
 
-            future_reservations = [r for r in reservations if r.get("is_future")]
-            is_reserved = len(future_reservations) > 0
+        future_reservations = [r for r in reservations if r.get("is_future")]
+        is_reserved = len(future_reservations) > 0
 
-            for r in reservations:
-                r.pop("is_future", None)
+        for r in reservations:
+            r.pop("is_future", None)
 
-            output = {
-                "is_reserved": is_reserved,
-                "reservations": future_reservations,  # 過去の予約は除外
-                "checked_at": now_jst.strftime("%Y-%m-%d %H:%M"),
-            }
-            report_progress(100, "Done")
-            print(json.dumps(output, ensure_ascii=False), flush=True)
+        output = {
+            "is_reserved": is_reserved,
+            "reservations": future_reservations,  # 過去の予約は除外
+            "checked_at": now_jst.strftime("%Y-%m-%d %H:%M"),
+        }
+        report_progress(100, "Done")
+        print(json.dumps(output, ensure_ascii=False), flush=True)
 
     except SystemExit:
         raise
