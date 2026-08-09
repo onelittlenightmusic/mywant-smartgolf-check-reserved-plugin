@@ -83,6 +83,22 @@ wantType:
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].datetime"
 
+    # The same moment as next_datetime, in the one format a reminder can read:
+    # reminder_types.go parses event_time with time.Parse(time.RFC3339) and
+    # rejects anything else, and "2026-08-08 12:00" has neither T nor a zone.
+    # Kept separate rather than reformatting next_datetime, which is what the
+    # card shows and what a person reads.
+    - name: next_datetime_rfc3339
+      description: next_datetime as RFC3339 (2026-08-08T12:00:00+09:00) — for reminder's event_time
+      type: string
+      subType: date
+      label: current
+      persistent: true
+      initialValue: ""
+      exposable: true
+      fetchFrom: mrs_raw_output
+      onFetchData: "reservations[0].datetime_rfc3339"
+
     - name: next_store
       description: Store name of the user's next upcoming SmartGolf reservation (e.g. 北新宿店)
       type: string
@@ -154,3 +170,8 @@ wantType:
               as: next_datetime
             - currentState: next_store
               as: next_store
+            # Published as a global parameter, not just an exposed field: a
+            # reminder reads event_time through GetStringParam, which only ever
+            # looks at params — an imported field would never reach it.
+            - currentState: next_datetime_rfc3339
+              asGlobalParam: smartgolf_next_datetime

@@ -82,6 +82,10 @@ def main():
                     store = room.split("/")[0] if "/" in room else ""
                     reservations.append({
                         "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
+                        # 同じ時刻をRFC3339でも出す。表示用の "datetime" は人が
+                        # 読むためのもので、reminder want の event_time は
+                        # time.Parse(time.RFC3339) しか受け付けないため。
+                        "datetime_rfc3339": dt_obj.isoformat(),
                         "store": store,
                         "room": room,
                         "status": status,
