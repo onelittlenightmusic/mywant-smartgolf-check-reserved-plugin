@@ -41,7 +41,16 @@ wantType:
       description: Error message if execution failed
       type: string
       label: current
-      persistent: true
+      # NOT persistent, deliberately: this field is what finalizeWhen.failed
+      # reads, so a value that survives a restart is a failure the want can
+      # never be restarted out of. A 504 from browser-run (no browser there to
+      # open the page) froze this want for eight days: every restart reset the
+      # five non-persistent fields, left the old error standing, re-failed the
+      # want in the same second and cancelled the monitor before it could
+      # re-check. The reservations themselves stay persistent — those are the
+      # answer and worth keeping across a restart; the reason the last attempt
+      # failed is not.
+      persistent: false
       initialValue: ""
 
     - name: summary
