@@ -45,6 +45,35 @@ def parse_datetime_line(line):
         return None
 
 
+# 「北新宿店 打席予約ページ」→ 「北新宿店」
+_STORE_LINK_PATTERN = re.compile(r"^(.+?)\s*打席予約ページ$")
+
+
+def build_store_links(links):
+    """アンカー一覧から 店名 → 予約画面URL のマップを作る
+
+    予約一覧ページは店ごとに「<店名> 打席予約ページ」というリンクを持ち、
+    その先が実際の予約画面（店ごとに別URL。北新宿店なら
+    /reserve/smartgolf_kitashinjuku/3421038/book/course_type）。
+    店名から機械的に導ける形ではないので、サイト自身のリンクを使う。
+    """
+    out = {}
+    for link in links:
+        if not isinstance(link, dict):
+            continue
+        href = (link.get("href") or "").strip()
+        text = (link.get("text") or "").strip()
+        if not href or not text:
+            continue
+        m = _STORE_LINK_PATTERN.match(text)
+        if not m:
+            continue
+        store = m.group(1).strip()
+        # 同じ店のリンクが複数あっても最初のものを使う（一覧は予約の並び順）
+        out.setdefault(store, href)
+    return out
+
+
 def report_progress(percentage, message=""):
     print(json.dumps({"_progress": percentage, "_message": message}, ensure_ascii=False), flush=True)
 
@@ -55,6 +84,14 @@ def main():
         result = browser_run(RESERVATIONS_URL, [
             {"type": "customStep", "name": "read",
              "parameters": {"selector": "body", "extract": "text", "as": "body_text", "timeout_ms": 8000}},
+            # 予約ごとの「予約画面」への導線。ページは各予約の店名を
+            # 「<店名> 打席予約ページ」というリンクにしており、その href が
+            # その店の予約画面（店ごとに違うURL）。本文テキストだけでは
+            # 行としてしか見えないので、アンカーを別に読む。
+            {"type": "customStep", "name": "readAll",
+             "parameters": {"selector": "a", "as": "links",
+                            "fields": {"text": {"extract": "text"},
+                                       "href": {"extract": "attr", "attr": "href"}}}},
         ])
 
         report_progress(50, "Parsing reservation data")
@@ -62,6 +99,9 @@ def main():
 
         body_text = result.get("body_text") or ""
         lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+
+        # 店名 → その店の予約画面URL
+        store_links = build_store_links(result.get("links") or [])
 
         # ページ構造:
         #   Approved
@@ -80,7 +120,7 @@ def main():
                 dt_obj = parse_datetime_line(dt_line)
                 if dt_obj:
                     store = room.split("/")[0] if "/" in room else ""
-                    reservations.append({
+                    entry = {
                         "datetime": dt_obj.strftime("%Y-%m-%d %H:%M"),
                         # 同じ時刻をRFC3339でも出す。表示用の "datetime" は人が
                         # 読むためのもので、reminder want の event_time は
@@ -90,7 +130,13 @@ def main():
                         "room": room,
                         "status": status,
                         "is_future": dt_obj > now_jst,
-                    })
+                    }
+                    # 見つかった時だけ入れる。空文字のURLをカードが
+                    # リンクとして扱ってしまうのを避ける。
+                    url = store_links.get(store)
+                    if url:
+                        entry["url"] = url
+                    reservations.append(entry)
                 i += 1
             else:
                 i += 1

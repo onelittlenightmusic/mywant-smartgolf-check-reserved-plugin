@@ -10,6 +10,22 @@ wantType:
     pattern: independent
     labels:
       category-icon: Flag
+      # Store → its booking page, for the card's store name to link to.
+      #
+      # The real source is the site: the reservations page links each booking's
+      # store as "<店名> 打席予約ページ", and main.py reads that href into the
+      # reservation's own `url` (→ next_url below). This map is what answers
+      # the click until then — for an answer recorded before the field existed,
+      # and if the site ever stops making that text a link.
+      #
+      # A label, so it rides on the want's metadata: paging the card back to an
+      # older answer replaces the state and leaves metadata alone, so the older
+      # cards can link out too.
+      #
+      # The URL is per store and not derivable from the name (北新宿店 →
+      # smartgolf_kitashinjuku/3421038), which is why this is a map and not a
+      # template.
+      reservation-urls: '{"北新宿店": "https://smartgolf.stores.jp/reserve/smartgolf_kitashinjuku/3421038/book/course_type"}'
       category-bg-light: "linear-gradient(160deg, #bbf7d0 0%, #dcfce7 100%)"
       category-bg-dark: "linear-gradient(160deg, #166534 0%, #052e16 100%)"
 
@@ -127,6 +143,16 @@ wantType:
       exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0].room"
+
+    - name: next_url
+      description: Booking page URL for the user's next upcoming SmartGolf reservation (from the site's own link)
+      type: string
+      label: current
+      persistent: true
+      initialValue: ""
+      exposable: true
+      fetchFrom: mrs_raw_output
+      onFetchData: "reservations[0].url"
 
     - name: current_reservation
       description: Next upcoming SmartGolf reservation as a JSON object {room, datetime, store, status}
