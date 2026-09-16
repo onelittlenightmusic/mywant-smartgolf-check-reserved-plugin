@@ -10,6 +10,11 @@ wantType:
     pattern: independent
     labels:
       category-icon: Flag
+      # Booked or not, on the tile. Read from the field and not from the
+      # answers: "no reservation" is an empty result, which the engine keeps no
+      # output for, and it is exactly the half worth seeing at a glance.
+      tile-icon: is_reserved
+      tile-icons: "true=CalendarCheck,false=CalendarX"
       # Store → its booking page, for the card's store name to link to.
       #
       # The real source is the site: the reservations page links each booking's
