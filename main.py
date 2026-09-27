@@ -81,7 +81,9 @@ def report_progress(percentage, message=""):
 def main():
     try:
         report_progress(5, "Opening reservations page")
-        result = browser_run(RESERVATIONS_URL, [
+        # quiet: 予約の確認はユーザーの行動を妨げない。ログイン切れなどでも
+        # 通知を出さず、タブも残さない。
+        result = browser_run(RESERVATIONS_URL, quiet=True, steps=[
             {"type": "customStep", "name": "read",
              "parameters": {"selector": "body", "extract": "text", "as": "body_text", "timeout_ms": 8000}},
             # 予約ごとの「予約画面」への導線。ページは各予約の店名を
