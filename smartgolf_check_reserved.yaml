@@ -10,6 +10,8 @@ wantType:
     pattern: independent
     labels:
       category-icon: Flag
+      # What a person calls it — the robot finds the want by these too.
+      aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
       # Booked or not, on the tile. Read from the field and not from the
       # answers: "no reservation" is an empty result, which the engine keeps no
       # output for, and it is exactly the half worth seeing at a glance.
