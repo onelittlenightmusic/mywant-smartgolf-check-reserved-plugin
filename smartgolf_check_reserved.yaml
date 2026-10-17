@@ -10,6 +10,11 @@ wantType:
     pattern: independent
     labels:
       category-icon: Flag
+      # Checked again every hour (engine: the scheduler's default-every, for a
+      # want whose spec has no when). The want is achieved on its first answer
+      # and its monitor stops there; this restarts it, so a booking made or
+      # cancelled since shows up within the hour.
+      default-every: 1h
       # What a person calls it — the robot finds the want by these too.
       aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
       # A photo joined to a reservation is the score card the simulator shows
