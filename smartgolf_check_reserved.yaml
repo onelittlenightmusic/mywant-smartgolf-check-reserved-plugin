@@ -12,6 +12,21 @@ wantType:
       category-icon: Flag
       # What a person calls it — the robot finds the want by these too.
       aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
+      # A photo joined to a reservation is the score card the simulator shows
+      # after a round. When one is joined (the capture skill), a model reads
+      # the words recognised in it into the fields below, by these rules, and
+      # the robot answers from the fields ("今朝のゴルフのスコアは？").
+      photo-reading: >-
+        A SmartGolf score card: the course, when it was played, the par and the
+        player's strokes for each hole, and the player's total.
+      # A card caught into this want (the capture skill on the whole want) goes
+      # with the reservation it was played on: matched by this field's time.
+      photo-match: played_at
+      # One field a line: name | what a question calls it | how it is read.
+      photo-fields: |
+        score | スコア, 打数, 成績, score | The player's total: the strokes followed by the difference from par in brackets (a number, then （+n）, （-n） or （E））. It ends the "Player 1" row, or stands on a line of its own just after it. Copy both parts. The numbers in the HOLE row are hole numbers and in the PAR row pars: never the score.
+        course | コース, ゴルフ場, course | The course's name, after "Nature" on the SCORE CARD line — without the play mode in brackets after it.
+        played_at | いつ, 日時, プレー, played | The date and time on the SCORE CARD line, written year-month-day hour:minute:second.
       # Booked or not, on the tile. Read from the field and not from the
       # answers: "no reservation" is an empty result, which the engine keeps no
       # output for, and it is exactly the half worth seeing at a glance.
