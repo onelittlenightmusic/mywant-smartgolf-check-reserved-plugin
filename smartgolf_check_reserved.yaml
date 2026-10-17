@@ -61,6 +61,13 @@ wantType:
       persistent: false
       initialValue: 120
 
+    - name: skill_poll_interval_ms
+      description: How often the reservations are checked, in milliseconds — once an hour; a booking is made days ahead, and every check opens the reservations page in a browser
+      type: int
+      label: goal
+      persistent: true
+      initialValue: 3600000
+
     - name: skill_path
       description: Path to the MRS skill script (set by onInitialize)
       type: string
@@ -208,6 +215,8 @@ wantType:
   onInitialize:
     current:
       skill_path: "~/.mywant/custom-types/mywant-smartgolf-check-reserved-plugin/main.py"
+    goal:
+      skill_poll_interval_ms: 3600000
 
   requires:
     - monitor_mrs_agent
