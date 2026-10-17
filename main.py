@@ -144,6 +144,11 @@ def main():
                 i += 1
 
         future_reservations = [r for r in reservations if r.get("is_future")]
+        # 過去の予約（キャンセルを除く）。チェックの合間に予約して打った回も、
+        # 履歴（履歴ドット）に入るように渡す。エンジンが history-from で読み、
+        # まだ履歴にないものだけをその時刻の答えとして足す。
+        past_reservations = [r for r in reservations
+                             if not r.get("is_future") and r.get("status") != "Cancelled"]
         is_reserved = len(future_reservations) > 0
 
         for r in reservations:
@@ -152,6 +157,7 @@ def main():
         output = {
             "is_reserved": is_reserved,
             "reservations": future_reservations,  # 過去の予約は除外
+            "past_reservations": past_reservations,
             "checked_at": now_jst.strftime("%Y-%m-%d %H:%M"),
         }
         report_progress(100, "Done")

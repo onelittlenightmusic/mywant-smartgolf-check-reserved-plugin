@@ -37,3 +37,8 @@ agent:
       label: current
       persistent: true
       onFetchData: "checked_at"
+    - name: past_reservations
+      type: object
+      label: current
+      persistent: false
+      onFetchData: "past_reservations"

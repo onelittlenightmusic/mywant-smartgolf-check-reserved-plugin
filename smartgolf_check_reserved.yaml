@@ -15,6 +15,11 @@ wantType:
       # and its monitor stops there; this restarts it, so a booking made or
       # cancelled since shows up within the hour.
       default-every: 1h
+      # The reservations page lists the past ones too: each one not yet an
+      # answer (a history dot) is added at its own time — the rounds booked and
+      # played between two checks, which a score card is then matched to.
+      history-from: past_reservations
+      history-at: datetime_rfc3339
       # What a person calls it — the robot finds the want by these too.
       aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
       # A photo joined to a reservation is the score card the simulator shows
@@ -124,6 +129,15 @@ wantType:
       exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations"
+
+    - name: past_reservations
+      description: The past SmartGolf reservations on the page (cancelled ones left out) — read into the answers as history (labels history-from / history-at)
+      type: object
+      label: current
+      persistent: false
+      initialValue: []
+      fetchFrom: mrs_raw_output
+      onFetchData: "past_reservations"
 
     - name: next_datetime
       description: Date and time of the user's next upcoming SmartGolf reservation (YYYY-MM-DD HH:MM)
