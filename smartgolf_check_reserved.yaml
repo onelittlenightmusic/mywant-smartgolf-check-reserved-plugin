@@ -20,6 +20,9 @@ wantType:
       # played between two checks, which a score card is then matched to.
       history-from: past_reservations
       history-at: datetime_rfc3339
+      # A check that found no reservation is not an answer: its result field
+      # still carries the last one it saw. Kept only when is_reserved.
+      history-if: is_reserved
       # What a person calls it — the robot finds the want by these too.
       aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
       # A photo joined to a reservation is the score card the simulator shows
