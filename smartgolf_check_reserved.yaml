@@ -66,6 +66,23 @@ wantType:
 
   finalResultField: current_reservation
 
+  # What a SmartGolf want can answer beyond its next reservation — chosen by
+  # the robot by its description, done by the server (mywant's
+  # fm_capability.go): the data named in reads, handed with the prompt.
+  capabilities:
+    - name: latest_score
+      description: 最新のゴルフのスコアを検索できる（ラウンドの予約に紐づいたスコアカードの写真から）
+      reads: [answers, answer_photos]
+      prompt: |
+        Each answer is a reservation, that is a round played (or to be played).
+        The photos joined to an answer are the score cards of that round: the
+        score is in their `score` field (e.g. 87（+15）), else in the words read
+        off them by the rules given. The latest score is the score on the photo
+        of the newest answer that has one. Say the score, and when and where it
+        was played (played_at and course when the photo has them, else the
+        answer's time and store). When no photo has a score, say no score card
+        has been joined to a round yet.
+
   state:
     - name: skill_timeout_seconds
       description: Max seconds to wait for the skill script to complete (default 120)
