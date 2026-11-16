@@ -24,7 +24,7 @@ wantType:
       # still carries the last one it saw. Kept only when is_reserved.
       history-if: is_reserved
       # What a person calls it — the robot finds the want by these too.
-      aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf"
+      aliases: "スマートゴルフ,スマートゴルフの予約,ゴルフ,ゴルフの予約,smart golf,golf"
       # A photo joined to a reservation is the score card the simulator shows
       # after a round. When one is joined (the capture skill), a model reads
       # the words recognised in it into the fields below, by these rules, and
