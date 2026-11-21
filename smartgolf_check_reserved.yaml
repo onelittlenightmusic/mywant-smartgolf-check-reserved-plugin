@@ -67,10 +67,17 @@ wantType:
   finalResultField: current_reservation
 
   # When it tells of its answer, besides every new one (the standard timing
-  # "answer"). soon: fifteen minutes before the reservation — main.py asks to
+  # "answer"). booked: a reservation made. soon: fifteen minutes before the reservation — main.py asks to
   # be woken then (_wake_at), looks at the page again and says it only if the
   # reservation still holds, once each (kept in its memo).
   timings:
+    # booked: a reservation made — one more on the list. Heard by the wants
+    # near it that listen for it (spec.hear): the weather says how the sky is.
+    - name: booked
+      description: 新しい予約ができたとき
+      onIncrease: reservations
+      murmur: true
+      notify: true
     - name: soon
       description: 予約の15分前（予約がまだあるのを確かめてから）
       murmur: true

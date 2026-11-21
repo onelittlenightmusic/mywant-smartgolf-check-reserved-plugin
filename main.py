@@ -201,11 +201,22 @@ def main():
         for r in reservations:
             r.pop("is_future", None)
 
-        told = memo().get("soon_told") or ""
+        kept = memo()
+        told = kept.get("soon_told") or ""
         say_soon, told = soon(future_reservations[0] if future_reservations else None, now_jst, told)
         if say_soon:
             emit({"_timing": "soon"})
-        emit({"_memo": {"soon_told": told}})
+        # 前回まで無かった予約に "new": true を付ける（初回は何も付けない）。
+        # 声（smartgolf_check_reserved.voice.py）がそれを選んで、予約ができた
+        # つぶやき（booked）の時刻・場所のラベルにする。
+        def key(r):
+            return f'{r.get("datetime_rfc3339")}|{r.get("store")}'
+        known = kept.get("known")
+        if isinstance(known, list):
+            for r in future_reservations:
+                if key(r) not in known:
+                    r["new"] = True
+        emit({"_memo": {"soon_told": told, "known": [key(r) for r in future_reservations]}})
 
         output = {
             "is_reserved": is_reserved,
