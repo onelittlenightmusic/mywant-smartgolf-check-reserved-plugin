@@ -66,18 +66,11 @@ wantType:
 
   finalResultField: current_reservation
 
-  # When it tells of its answer. booked: a reservation found that was not
-  # there before (what every answer told of before there were timings).
-  # soon: fifteen minutes before it — main.py asks to be woken then
-  # (_wake_at), looks at the page again and says it only if the reservation
-  # still holds.
+  # When it tells of its answer, besides every new one (the standard timing
+  # "answer"). soon: fifteen minutes before the reservation — main.py asks to
+  # be woken then (_wake_at), looks at the page again and says it only if the
+  # reservation still holds, once each (kept in its memo).
   timings:
-    - name: booked
-      description: 新しい予約が見つかったとき
-      if: is_reserved
-      onChange: next_datetime_rfc3339
-      murmur: true
-      notify: true
     - name: soon
       description: 予約の15分前（予約がまだあるのを確かめてから）
       murmur: true
@@ -240,17 +233,6 @@ wantType:
       exposable: true
       fetchFrom: mrs_raw_output
       onFetchData: "reservations[0]"
-
-    # The reservation (its datetime_rfc3339) that "soon" was said for: said
-    # once each, however often the page is looked at in its last minutes.
-    - name: soon_told
-      description: The reservation (RFC3339) the "soon" timing was last said for
-      type: string
-      label: current
-      persistent: true
-      initialValue: ""
-      fetchFrom: mrs_raw_output
-      onFetchData: "soon_told"
 
     - name: checked_at
       description: JST timestamp when the reservation check was last performed (YYYY-MM-DD HH:MM)

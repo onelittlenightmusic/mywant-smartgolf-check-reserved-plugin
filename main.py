@@ -83,12 +83,17 @@ def emit(obj):
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
 
-def previous_state():
-    """前回までの自分の状態（エンジンが MYWANT_WANT_STATE で渡す）。"""
+def memo():
+    """前回の自分が残したメモ（_memo）。SDK の current() から（共有の
+    プラグインサービスでも単独の起動でも）。SDK が無ければ環境変数から。"""
     try:
-        return json.loads(os.environ.get("MYWANT_WANT_STATE") or "{}") or {}
-    except ValueError:
-        return {}
+        from mywant import current
+        return dict(current().memo or {})
+    except Exception:
+        try:
+            return json.loads(os.environ.get("MYWANT_WANT_MEMO") or "{}") or {}
+        except ValueError:
+            return {}
 
 
 def soon(next_reservation, now_jst, told):
@@ -196,13 +201,13 @@ def main():
         for r in reservations:
             r.pop("is_future", None)
 
-        told = previous_state().get("soon_told") or ""
+        told = memo().get("soon_told") or ""
         say_soon, told = soon(future_reservations[0] if future_reservations else None, now_jst, told)
         if say_soon:
             emit({"_timing": "soon"})
+        emit({"_memo": {"soon_told": told}})
 
         output = {
-            "soon_told": told,
             "is_reserved": is_reserved,
             "reservations": future_reservations,  # 過去の予約は除外
             "past_reservations": past_reservations,
