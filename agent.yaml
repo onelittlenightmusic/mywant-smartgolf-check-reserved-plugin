@@ -42,3 +42,8 @@ agent:
       label: current
       persistent: false
       onFetchData: "past_reservations"
+    - name: soon_told
+      type: string
+      label: current
+      persistent: true
+      onFetchData: "soon_told"

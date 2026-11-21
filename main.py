@@ -15,6 +15,11 @@ for _mrs_path in ("~/work/machine-readable-skills-browser",
 from mrs_browser import browser_run  # noqa: E402
 
 JST = timezone(timedelta(hours=9))
+# 予約の何分前に「予約が近い」(timing soon) を言うか。その時刻にもう一度
+# 予約ページを見て、まだ予約が残っているときだけ言う。
+SOON_LEAD = timedelta(minutes=15)
+# 起こされる時刻と実際に走る時刻のずれ（スケジューラの刻み、ページの読み込み）。
+SOON_SLACK = timedelta(minutes=2)
 RESERVATIONS_URL = "https://smartgolf.stores.jp/reserve/u"
 
 # "Sun, April 12, 2026 19:00（60 minutes）" → parse up to "19:00"
@@ -72,6 +77,43 @@ def build_store_links(links):
         # 同じ店のリンクが複数あっても最初のものを使う（一覧は予約の並び順）
         out.setdefault(store, href)
     return out
+
+
+def emit(obj):
+    print(json.dumps(obj, ensure_ascii=False), flush=True)
+
+
+def previous_state():
+    """前回までの自分の状態（エンジンが MYWANT_WANT_STATE で渡す）。"""
+    try:
+        return json.loads(os.environ.get("MYWANT_WANT_STATE") or "{}") or {}
+    except ValueError:
+        return {}
+
+
+def soon(next_reservation, now_jst, told):
+    """次の予約について「予約が近い」を言うか、いつもう一度見に来るか。
+
+    返り値は (今言うか, 言い終えた予約の時刻)。予約の SOON_LEAD 前より
+    前なら、その時刻に起こしてもらう（_wake_at）。起きて見たときに予約が
+    まだあり、まだ言っていなければ言う。キャンセルされていれば何も言わない
+    （次の予約がもう無いか、別の時刻になっている）。
+    """
+    if not next_reservation:
+        emit({"_wake_at": ""})
+        return False, told
+    at = next_reservation.get("datetime_rfc3339") or ""
+    try:
+        start = datetime.fromisoformat(at)
+    except ValueError:
+        return False, told
+    until = start - now_jst
+    if until <= timedelta(0) or told == at:
+        return False, told
+    if until <= SOON_LEAD + SOON_SLACK:
+        return True, at
+    emit({"_wake_at": (start - SOON_LEAD).isoformat(timespec="seconds")})
+    return False, told
 
 
 def report_progress(percentage, message=""):
@@ -154,7 +196,13 @@ def main():
         for r in reservations:
             r.pop("is_future", None)
 
+        told = previous_state().get("soon_told") or ""
+        say_soon, told = soon(future_reservations[0] if future_reservations else None, now_jst, told)
+        if say_soon:
+            emit({"_timing": "soon"})
+
         output = {
+            "soon_told": told,
             "is_reserved": is_reserved,
             "reservations": future_reservations,  # 過去の予約は除外
             "past_reservations": past_reservations,
