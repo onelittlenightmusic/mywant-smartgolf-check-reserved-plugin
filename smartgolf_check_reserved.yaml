@@ -78,6 +78,13 @@ wantType:
       onIncrease: reservations
       murmur: true
       notify: true
+    # cancelled: a reservation gone — one fewer on the list (its reminder,
+    # if one was made for it, can go too).
+    - name: cancelled
+      description: 予約がなくなったとき
+      onDecrease: reservations
+      murmur: true
+      notify: true
     - name: soon
       description: 予約の15分前（予約がまだあるのを確かめてから）
       murmur: true
