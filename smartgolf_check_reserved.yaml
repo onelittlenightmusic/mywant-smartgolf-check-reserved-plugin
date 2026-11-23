@@ -75,6 +75,7 @@ wantType:
     # near it that listen for it (spec.hear): the weather says how the sky is.
     - name: booked
       description: 新しい予約ができたとき
+      icon: calendar-check
       onIncrease: reservations
       murmur: true
       notify: true
@@ -82,11 +83,13 @@ wantType:
     # if one was made for it, can go too).
     - name: cancelled
       description: 予約がなくなったとき
+      icon: calendar-x
       onDecrease: reservations
       murmur: true
       notify: true
     - name: soon
       description: 予約の15分前（予約がまだあるのを確かめてから）
+      icon: alarm-clock
       murmur: true
       notify: true
 
