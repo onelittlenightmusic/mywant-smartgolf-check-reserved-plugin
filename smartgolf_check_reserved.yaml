@@ -9,6 +9,9 @@ wantType:
     category: smartgolf
     pattern: independent
     labels:
+      # What the robot reads a request against, when it asks Laya which want
+      # it is: the type in a few words of its own (laya-option).
+      laya-option: "スマートゴルフの予約を確認する"
       category-icon: Flag
       # Checked again every hour (engine: the scheduler's default-every, for a
       # want whose spec has no when). The want is achieved on its first answer
@@ -82,9 +85,24 @@ wantType:
     # cancelled: a reservation gone — one fewer on the list (its reminder,
     # if one was made for it, can go too).
     - name: cancelled
+      irregular: true   # out of the ordinary: the robot looks at it
+      requires: [rebook, notify]   # what it needs done (met by a capability that attends to it)
       description: 予約がなくなったとき
       icon: calendar-x
       onDecrease: reservations
+      murmur: true
+      notify: true
+    # rescheduled: the next reservation is at another time than it was (a
+    # booking moved). Read as the next reservation's time changing while one
+    # is held — a reservation made before it changes it too, which booked
+    # also says.
+    - name: rescheduled
+      description: 次の予約の日時が変わったとき
+      icon: calendar-clock
+      if: is_reserved
+      onChange: next_datetime_rfc3339
+      irregular: true
+      requires: [reschedule, notify]   # what it needs done (met by a capability that attends to it)
       murmur: true
       notify: true
     - name: soon
@@ -297,3 +315,12 @@ wantType:
             # looks at params — an imported field would never reach it.
             - currentState: next_datetime_rfc3339
               asGlobalParam: smartgolf_next_datetime
+
+  # How a want of this type is asked for, in words, and what it is made with
+  # (want-spec asks): what reads requests (the robot, Laya) learns from these
+  # and is tested on them. A parameter left out is one the request does not say.
+  asks:
+    - say: "スマートゴルフの予約は入ってる？"
+      variants: ["スマートゴルフの予約を確認", "スマートゴルフの次の予約は？", "スマートゴルフの予約がいつか見せて"]
+    - say: "ゴルフの予約を確認して"
+      variants: ["ゴルフの予約は入ってる？", "ゴルフの次の予約", "ゴルフの予約状況"]
